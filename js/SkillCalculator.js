@@ -30,19 +30,9 @@
 //global vars
 const TotalSkillPoints = 31;
 const MaxPlayerLevel = 31;
-const MaxNrOfSpecializations = 2;
-var currentNrOfSpecializations;
-const DefaultPlayerClass = "&nbsp;";
+const DefaultPlayerClass = "Survivor";
 var SkillPointsSpent;
-
-var activeSpecializationElement = null;
-
-const SkillTypeSorter = {
-    'COMBAT': 1, // 0 is apparently odd in JS sometimes, so we start at 1.
-    'SUPPORT': 2,
-    'SURVIVAL': 3,
-    'TECH': 4
-}
+var SpecSkillActive;
 
 //skill node array
 var SkillNodeElements =
@@ -61,7 +51,6 @@ var SkillName;
 var SkillDescription;
 
 
-
 function InitOnLoad() {
 
     PlayerClass = document.getElementById("PlayerClass");
@@ -69,7 +58,7 @@ function InitOnLoad() {
     SkillPointsLeft = document.getElementById("SkillPointsLeft");
     SkillName = document.getElementById("SkillName");
     SkillDescription = document.getElementById("SkillDescription");
-    currentNrOfSpecializations = 0;
+    SpecSkillActive = false;
     PlayerClass.innerHTML = DefaultPlayerClass;
 
     UpdatePlayerStats();
@@ -98,7 +87,7 @@ function PopulateSkillsFromParam(param) {
     if (skillData.length != allSkillNodes.length) {
         return;
     }
-    
+
 
     var i;
     for (i = 0; i < allSkillNodes.length; i++) {
@@ -111,7 +100,7 @@ function PopulateSkillsFromParam(param) {
         if (rank > 0) {
             onLeftClick(allSkillNodes[i], rank);
         }
-        
+
     }
 
 }
@@ -149,6 +138,7 @@ function SaveBuild() {
     el.select();
     document.execCommand('copy');
     document.body.removeChild(el);
+
 }
 
 function UpdatePlayerStats() {
@@ -228,6 +218,7 @@ function SetupSkillTree(tree) {
 
         //add leftClick eventhandler
         skillNodes[i].addEventListener("click", function (e) {
+            onLeftClick(e.currentTarget);
             onLeftClick(e.currentTarget, 1);
         });
 
@@ -246,7 +237,6 @@ function SetupSkillTree(tree) {
 
     //add array
     SkillNodeElements[keyPrefix.toUpperCase()] = nodeElementArray;
-
 }
 
 //this happens when you right click a skill
@@ -266,8 +256,7 @@ function onRightClick(skill) {
         var i = parseInt(indexobj[1]);
 
         //check if the next nodes counter is hidden. - if so do nothing
-        if (currentRank == 1 &&
-            !skill.classList.contains("specialization") &&
+        if (!skill.classList.contains("specialization") &&
             !elementList[i].getElementsByClassName("rankIndicator")[0].classList.contains("hidden")) {
             return;
         }
@@ -277,24 +266,15 @@ function onRightClick(skill) {
         currentRankElement.innerHTML = currentRank;
 
         if (currentRank == 0) {
+            //hide the indicator
+            counter.classList.add("hidden");
 
             //hide the counter
             counter.classList.add("hidden");
-
-            //remove active status from skill
-            skill.classList.remove("active");
-
-
-
+            
             if (skill.classList.contains("specialization")) {
-
-                if (activeSpecializationElement != null && activeSpecializationElement == skill) {
-                    //we need to update class
-                    //get all of 
-                }
-
                 PlayerClass.innerHTML = DefaultPlayerClass;
-                currentNrOfSpecializations--;
+                SpecSkillActive = false;
             }
             else {
                 //lock the next rank
@@ -302,11 +282,12 @@ function onRightClick(skill) {
             }
         }
 
+
         UpdatePlayerStats();
     }
 }
 
-//this happens when you right click a skill
+//this happens when you left click a skill
 function onLeftClick(skill, nrToAdd) {
 
     //no skill points left? do nothing
@@ -323,7 +304,7 @@ function onLeftClick(skill, nrToAdd) {
     var currentRank = parseInt(currentRankElement.innerHTML)
     var maxRank = parseInt(maxRankElement.innerHTML)
 
-    if (skill.classList.contains("specialization") && (currentNrOfSpecializations >= MaxNrOfSpecializations) && currentRank <= 0) {
+    if (skill.classList.contains("specialization") && SpecSkillActive && currentRank <= 0) {
         return;
     }
 
@@ -332,10 +313,6 @@ function onLeftClick(skill, nrToAdd) {
         if (currentRank == 0) {
             //show the indicator
             counter.classList.remove("hidden");
-
-            //add active status to skill
-            skill.classList.add("active");
-
             //unlock next rank if this is not a specialization skill.
             if (!skill.classList.contains("specialization")) {
 
@@ -348,7 +325,7 @@ function onLeftClick(skill, nrToAdd) {
             }
             else {
                 //it is a spec skill. make sure we can only have one!
-                currentNrOfSpecializations++;
+                SpecSkillActive = true;
                 var skillData = skillDictionary[skill.dataset.key];
                 PlayerClass.innerHTML = skillData.PlayerClassName;
             }
